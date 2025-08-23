@@ -1,0 +1,13 @@
+player_name=Mike
+current_character=Healer
+player_hp=6418
+player_attack=55
+player_exp=360
+player_level=10
+puk=1605
+inventory=Attack Boost:5:5:attack:0|Health Boost:20:5:hp:0|Major Heal:50:20:heal:0|Health Boost:20:5:hp:0|Major Heal:50:20:heal:0
+player_status=poison
+player_status_turns=2
+quest_monster_progress=37
+quest_boss_progress=8
+skills=
