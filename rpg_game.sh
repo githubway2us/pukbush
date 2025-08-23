@@ -1008,7 +1008,7 @@ upgrade_menu() {
 # ฟังก์ชัน: ส่งผลคะแนนขึ้นท้าชิง (API)
 # -----------------------------------
 send_challenge() {
-    api_url="https://picks-display-providers-fired.trycloudflare.com/api/game/update"
+    api_url="https://pukserv.wuaze.com/api/game/update"
 
     http_response=$(curl -s -o response.json -w "%{http_code}" \
         -X POST "$api_url" \
