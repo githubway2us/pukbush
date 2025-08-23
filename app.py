@@ -37,6 +37,9 @@ def update_game():
 # 🏆 แสดงหน้า Scoreboard (HTML)
 @app.route('/scoreboard')
 def scoreboard():
+    # แปลง dict เป็น list sorted by exp
+    sorted_players = sorted(players_dict.items(), key=lambda x: x[1]["exp"], reverse=True)
+
     html = """
     <html>
     <head>
@@ -61,7 +64,7 @@ def scoreboard():
                 <th>Attack</th>
                 <th>PUK</th>
             </tr>
-            {% for name, stats in players.items()|sort(attribute='exp', reverse=True) %}
+            {% for name, stats in sorted_players %}
             <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ name }}</td>
@@ -76,7 +79,7 @@ def scoreboard():
     </body>
     </html>
     """
-    return render_template_string(html, players=players_dict)
+    return render_template_string(html, sorted_players=sorted_players)
 
 
 if __name__ == '__main__':
