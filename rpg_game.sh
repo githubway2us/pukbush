@@ -4,6 +4,9 @@
 # ตัวแปรเริ่มต้น
 # -----------------------------------
 save_file="savegame.txt"
+api_url=""  # เริ่มต้นด้วยค่าว่าง ผู้เล่นต้องกำหนดเอง
+last_sent_time=$(date +%s)  # เวลาที่ส่งคะแนนครั้งล่าสุด
+send_interval=300           # ช่วงเวลาการส่งคะแนน (5 นาที)
 max_inventory=5
 player_name="Adventurer"
 current_character="none"
@@ -331,6 +334,7 @@ save_game() {
     echo "player_exp=$player_exp" >> "$save_file"
     echo "player_level=$player_level" >> "$save_file"
     echo "puk=$puk" >> "$save_file"
+    echo "api_url=$api_url" >> "$save_file"
     echo -n "inventory=" >> "$save_file"
     if [ ${#inventory[@]} -eq 0 ]; then
         echo "" >> "$save_file"
@@ -377,6 +381,7 @@ save_game() {
                 ;;
         esac
     done
+    echo "🌐 API URL: $api_url"
 }
 
 # -----------------------------------
@@ -395,6 +400,7 @@ load_game() {
     echo "✅ โหลดเกมเรียบร้อย! "
     echo "✨ ผู้เล่น: $player_name | ตัวละคร: $current_character"
     echo "✨ PUK: $puk | ❤️ HP: $player_hp | ⚔️ ATK: $player_attack | 🧬 EXP: $player_exp/$((player_level * 50)) (Lv.$player_level)"
+    echo "🌐 API URL: $api_url"
     echo "🪄 สกิลที่โหลด:"
     if [ ${#skills[@]} -eq 0 ]; then
         echo "   ไม่มีสกิล"
@@ -916,13 +922,124 @@ fight_monster() {
 }
 
 # -----------------------------------
+# ฟังก์ชัน: ตั้งค่า API URL
+# -----------------------------------
+set_api_url() {
+    echo "🌐 กรุณาป้อน URL ของ API (เช่น https://example.com/api/game/update): "
+    read input_url
+    if [[ "$input_url" =~ ^https?://.+$ ]]; then
+        api_url="$input_url"
+        echo "✅ ตั้งค่า API URL เป็น: $api_url"
+        save_game
+    else
+        echo "❌ URL ไม่ถูกต้อง! ต้องเริ่มด้วย http:// หรือ https://"
+        api_url=""
+    fi
+}
+
+# -----------------------------------
+# ฟังก์ชัน: ส่งผลคะแนนขึ้นท้าชิง (API)
+# -----------------------------------
+send_challenge() {
+    if [ -z "$api_url" ]; then
+        echo "❌ ไม่ได้ตั้งค่า API URL! กรุณาตั้งค่าในเมนูตั้งค่า"
+        return
+    fi
+
+    payload=$(jq -n --arg pn "$player_name" \
+                    --arg cc "$current_character" \
+                    --arg lvl "$player_level" \
+                    --arg exp "$player_exp" \
+                    --arg hp "$player_hp" \
+                    --arg atk "$player_attack" \
+                    --arg puk "$puk" \
+                    '{
+                        player_name: $pn,
+                        character: $cc,
+                        level: ($lvl | tonumber),
+                        exp: ($exp | tonumber),
+                        hp: ($hp | tonumber),
+                        attack: ($atk | tonumber),
+                        puk: ($puk | tonumber)
+                    }')
+
+    http_response=$(curl -s -o response.json -w "%{http_code}" \
+        -X POST "$api_url" \
+        -H "Content-Type: application/json" \
+        -d "$payload")
+
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;36m'
+    NC='\033[0m'
+
+    if [ "$http_response" -eq 200 ]; then
+        status=$(jq -r '.status' response.json 2>/dev/null || echo "unknown")
+        message=$(jq -r '.message' response.json 2>/dev/null || echo "No message")
+        player=$(jq -r '.player' response.json 2>/dev/null || echo "{}")
+        total=$(jq -r '.all_players | length' response.json 2>/dev/null || echo 0)
+
+        echo -e "✅ ส่งผลคะแนนขึ้นท้าชิงสำเร็จแล้ว!"
+        echo -e "💬 ข้อความจากเซิร์ฟเวอร์: $message"
+        echo -e "📊 สถานะผู้เล่นของคุณ:"
+        hp=$(echo "$player" | jq -r '.hp // 0')
+        attack=$(echo "$player" | jq -r '.attack // 0')
+        exp=$(echo "$player" | jq -r '.exp // 0')
+        level=$(echo "$player" | jq -r '.level // 0')
+        puk=$(echo "$player" | jq -r '.puk // 0')
+        character=$(echo "$player" | jq -r '.character // "unknown"')
+
+        echo -e "   🦸‍♂️ ตัวละคร: ${BLUE}$character${NC}"
+        echo -e "   💎 LVL: ${BLUE}$level${NC}"
+        echo -e "   🟢 HP: ${GREEN}$hp${NC}"
+        echo -e "   🟡 ATK: ${YELLOW}$attack${NC}"
+        echo -e "   🟢 EXP: ${GREEN}$exp${NC}"
+        echo -e "   🟢 PUK: ${GREEN}$puk${NC}"
+
+        echo -e "\n🌐 ผู้เล่นทั้งหมด ($total):"
+        jq -r '.all_players | to_entries | .[] | 
+            "   \(.key + 1): ตัวละคร:\(.value.character) HP:\(.value.hp) ATK:\(.value.attack) EXP:\(.value.exp) LVL:\(.value.level) PUK:\(.value.puk)"' response.json 2>/dev/null || echo "   ไม่สามารถดึงข้อมูลผู้เล่นได้"
+
+        player_hp=$hp
+        player_attack=$attack
+        player_exp=$exp
+        player_level=$level
+        puk=$puk
+        current_character=$character
+        last_sent_time=$(date +%s)
+        save_game
+    else
+        echo -e "❌ การส่งผลคะแนนล้มเหลว (รหัส: $http_response)"
+        echo -e "📡 คำตอบจากเซิร์ฟเวอร์:"
+        cat response.json 2>/dev/null || echo "ไม่มีข้อมูลจากเซิร์ฟเวอร์"
+    fi
+
+    rm -f response.json 2>/dev/null
+}
+
+# -----------------------------------
+# ฟังก์ชัน: ตรวจสอบและส่งคะแนนตามเวลา
+# -----------------------------------
+check_and_send_score() {
+    current_time=$(date +%s)
+    time_diff=$((current_time - last_sent_time))
+    if [ $time_diff -ge $send_interval ]; then
+        echo "⏰ ถึงเวลาส่งคะแนนอัตโนมัติ!"
+        send_challenge
+    fi
+}
+
+# -----------------------------------
 # ฟังก์ชัน: เมนูอัพเกรด
 # -----------------------------------
 upgrade_menu() {
     while true; do
+        check_and_send_score
         echo "===== 🛠️ เมนูอัพเกรด ====="
         echo "✨ ผู้เล่น: $player_name | ตัวละคร: $current_character"
         echo "✨ PUK: $puk | ❤️ HP: $player_hp | ⚔️ ATK: $player_attack | 🧬 EXP: $player_exp/$((player_level * 50)) (Lv.$player_level)"
+        echo "🌐 API URL: ${api_url:-ยังไม่ได้ตั้งค่า}"
         echo "🪄 สกิล: "
         if [ ${#skills[@]} -eq 0 ]; then
             echo "   ไม่มีสกิล"
@@ -950,7 +1067,8 @@ upgrade_menu() {
         echo "7) กลับไปต่อสู้"
         echo "8) บันทึกเกม"
         echo "9) ส่งผลคะแนนขึ้นท้าชิง 🚀"
-        echo "10) ออกจากเกม"
+        echo "10) ตั้งค่า API URL"
+        echo "11) ออกจากเกม"
         echo "เลือกเมนู: "
         read choice
         case $choice in
@@ -994,6 +1112,9 @@ upgrade_menu() {
                 send_challenge
                 ;;
             10)
+                set_api_url
+                ;;
+            11)
                 echo "👋 ออกจากเกม "
                 exit 0
                 ;;
@@ -1005,66 +1126,6 @@ upgrade_menu() {
 }
 
 # -----------------------------------
-# ฟังก์ชัน: ส่งผลคะแนนขึ้นท้าชิง (API)
-# -----------------------------------
-send_challenge() {
-    api_url="https://pukserv.wuaze.com/api/game/update"
-
-    http_response=$(curl -s -o response.json -w "%{http_code}" \
-        -X POST "$api_url" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"player_name\": \"$player_name\",
-            \"character\": \"$current_character\",
-            \"level\": $player_level,
-            \"exp\": $player_exp,
-            \"hp\": $player_hp,
-            \"attack\": $player_attack,
-            \"puk\": $puk
-        }")
-
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[1;33m'
-    BLUE='\033[0;36m'
-    NC='\033[0m'
-
-    if [ "$http_response" -eq 200 ]; then
-        status=$(jq -r '.status' response.json)
-        message=$(jq -r '.message' response.json)
-        player=$(jq -r '.player' response.json)
-        total=$(jq -r '.all_players | length' response.json)
-
-        echo -e "✅ ส่งผลคะแนนขึ้นท้าชิงสำเร็จแล้ว!"
-        echo -e "💬 ข้อความจากเซิร์ฟเวอร์: $message"
-        echo -e "📊 สถานะผู้เล่นของคุณ:"
-        hp=$(echo "$player" | jq -r '.hp')
-        attack=$(echo "$player" | jq -r '.attack')
-        exp=$(echo "$player" | jq -r '.exp')
-        level=$(echo "$player" | jq -r '.level')
-        puk=$(echo "$player" | jq -r '.puk')
-        character=$(echo "$player" | jq -r '.character')
-
-        echo -e "   🦸‍♂️ ตัวละคร: ${BLUE}$character${NC}"
-        echo -e "   💎 LVL: ${BLUE}$level${NC}"
-        echo -e "   🟢 HP: ${GREEN}$hp${NC}"
-        echo -e "   🟡 ATK: ${YELLOW}$attack${NC}"
-        echo -e "   🟢 EXP: ${GREEN}$exp${NC}"
-        echo -e "   🟢 PUK: ${GREEN}$puk${NC}"
-
-        echo -e "\n🌐 ผู้เล่นทั้งหมด ($total):"
-        jq -r '.all_players | to_entries | .[] | 
-            "   \(.key): ตัวละคร:\(.value.character) HP:\(.value.hp) ATK:\(.value.attack) EXP:\(.value.exp) LVL:\(.value.level) PUK:\(.value.puk)"' response.json
-    else
-        echo -e "❌ การส่งผลคะแนนล้มเหลว (รหัส: $http_response)"
-        echo -e "📡 คำตอบจากเซิร์ฟเวอร์:"
-        cat response.json
-    fi
-
-    rm -f response.json
-}
-
-# -----------------------------------
 # เริ่มเกม
 # -----------------------------------
 echo "🌟 เลือกโหมด RPG:"
@@ -1072,6 +1133,7 @@ echo "1) เริ่มเกมใหม่ (auto)"
 echo "2) เริ่มเกมใหม่ (manual)"
 echo "3) โหลดเกม"
 echo "4) สร้างไอดีใหม่"
+echo "5) ตั้งค่า API URL"
 echo "เลือก: "
 read start_choice
 case $start_choice in
@@ -1079,11 +1141,13 @@ case $start_choice in
         rpg_mode="auto"
         reset_player
         echo "🎮 โหมด RPG: auto "
+        set_api_url
         ;;
     2)
         rpg_mode="manual"
         reset_player
         echo "🎮 โหมด RPG: manual "
+        set_api_url
         ;;
     3)
         load_game
@@ -1091,15 +1155,21 @@ case $start_choice in
             echo "🎮 เริ่มเกมใหม่ในโหมด manual "
             rpg_mode="manual"
             reset_player
+            set_api_url
         fi
         ;;
     4)
         create_new_id
+        set_api_url
+        ;;
+    5)
+        set_api_url
         ;;
     *)
         echo "❌ ตัวเลือกไม่ถูกต้อง! เริ่มเกมในโหมด manual "
         rpg_mode="manual"
         reset_player
+        set_api_url
         ;;
 esac
 sleep 1
