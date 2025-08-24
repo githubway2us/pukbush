@@ -52,7 +52,8 @@
 ---
 
 ## การติดตั้ง
-
+## windows ::ถ้าคุณติดตั้ง Git for Windows
+ แล้ว จะมี Git Bash มาให้  https://git-scm.com/downloads/win
 ### บน Linux/Unix/macOS
 
 1. **โคลนหรือดาวน์โหลดสคริปต์**:
