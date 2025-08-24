@@ -56,6 +56,71 @@
  แล้ว จะมี Git Bash มาให้  https://git-scm.com/downloads/win
 ### บน Linux/Unix/macOS
 
+##เพื่อให้ อีโมจิ + ภาษาไทยแสดงผลได้ครบ เราจะใช้ Windows Terminal + Git Bash
+
+##🔧 ขั้นตอนการตั้งค่า Windows Terminal + Git Bash
+1) ติดตั้ง Windows Terminal
+
+##เปิด Microsoft Store → ค้นหา Windows Terminal
+
+กด ติดตั้ง
+
+2) เพิ่ม Git Bash เป็น Profile
+
+##เปิด Windows Terminal
+
+คลิกลูกศร ⬇️ ข้างแท็บ → Settings
+
+ไปที่ Add a new profile → New empty profile
+
+##ตั้งค่า:
+
+Name: Git Bash
+
+Command line:
+
+"C:\Program Files\Git\bin\bash.exe" --login -i
+
+
+##(ตรวจสอบว่าติดตั้ง Git ที่ path นี้ ถ้าไม่ ใช้ where git ใน CMD หา path ที่ถูกต้อง)
+
+Starting directory (optional):
+
+%USERPROFILE%
+
+
+กด Save
+
+3) ตั้งค่าให้ใช้ UTF-8
+
+##ใน Windows Terminal profile ของ Git Bash:
+
+ไปที่ Appearance → Font face
+เลือกฟอนต์ที่รองรับไทย + อีโมจิ เช่น:
+
+Cascadia Code PL (มาพร้อม Windows Terminal)
+
+Segoe UI Emoji
+
+Noto Color Emoji
+
+##ไปที่ Advanced → Environment variables
+เพิ่ม:
+
+LANG = en_US.UTF-8
+LC_ALL = en_US.UTF-8
+
+4) ทดสอบ
+
+##เปิด Git Bash ผ่าน Windows Terminal แล้วลองรัน:
+
+cd /d/job/games
+./app.sh
+
+
+##ถ้าเซ็ตครบ → คุณจะเห็น ภาษาไทย + ✅ ❌ 🌟 อีโมจิ แสดงสวยงามเลยครับ 😎
+
+
 1. **โคลนหรือดาวน์โหลดสคริปต์**:
    ```bash
    git clone https://github.com/githubway2us/pukbush.git
