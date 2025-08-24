@@ -56,69 +56,32 @@
  แล้ว จะมี Git Bash มาให้  https://git-scm.com/downloads/win
 ### บน Linux/Unix/macOS
 
-##เพื่อให้ อีโมจิ + ภาษาไทยแสดงผลได้ครบ เราจะใช้ Windows Terminal + Git Bash
+## ความต้องการของระบบ
 
-##🔧 ขั้นตอนการตั้งค่า Windows Terminal + Git Bash
-1) ติดตั้ง Windows Terminal
+- **ระบบปฏิบัติการ**: Linux/Unix/macOS หรือ Windows 10/11 ผ่าน WSL  
+- **ซอฟต์แวร์ที่ต้องติดตั้ง**:  
+  - `bash`  
+  - `jq` (สำหรับ JSON ในฟังก์ชัน API)  
+  - `curl` (สำหรับส่ง HTTP request)  
+- **เซิร์ฟเวอร์** (ถ้าใช้ API): Flask รันที่ `http://localhost:7700`
 
-##เปิด Microsoft Store → ค้นหา Windows Terminal
+---
 
-กด ติดตั้ง
+## การติดตั้งบน Windows
 
-2) เพิ่ม Git Bash เป็น Profile
-
-##เปิด Windows Terminal
-
-คลิกลูกศร ⬇️ ข้างแท็บ → Settings
-
-ไปที่ Add a new profile → New empty profile
-
-##ตั้งค่า:
-
-Name: Git Bash
-
-Command line:
-
-"C:\Program Files\Git\bin\bash.exe" --login -i
-
-
-##(ตรวจสอบว่าติดตั้ง Git ที่ path นี้ ถ้าไม่ ใช้ where git ใน CMD หา path ที่ถูกต้อง)
-
-Starting directory (optional):
-
-%USERPROFILE%
-
-
-กด Save
-
-3) ตั้งค่าให้ใช้ UTF-8
-
-##ใน Windows Terminal profile ของ Git Bash:
-
-ไปที่ Appearance → Font face
-เลือกฟอนต์ที่รองรับไทย + อีโมจิ เช่น:
-
-Cascadia Code PL (มาพร้อม Windows Terminal)
-
-Segoe UI Emoji
-
-Noto Color Emoji
-
-##ไปที่ Advanced → Environment variables
-เพิ่ม:
-
-LANG = en_US.UTF-8
-LC_ALL = en_US.UTF-8
-
-4) ทดสอบ
-
-##เปิด Git Bash ผ่าน Windows Terminal แล้วลองรัน:
-
-cd /d/job/games
-./app.sh
-
-
-##ถ้าเซ็ตครบ → คุณจะเห็น ภาษาไทย + ✅ ❌ 🌟 อีโมจิ แสดงสวยงามเลยครับ 😎
+1. ติดตั้ง [Git for Windows](https://git-scm.com/downloads) (รวม Git Bash)  
+2. ติดตั้ง [Windows Terminal](https://aka.ms/terminal)  
+3. เพิ่ม Git Bash เป็น Profile ใน Windows Terminal:
+   - Name: `Git Bash`
+   - Command line: `"C:\Program Files\Git\bin\bash.exe" --login -i`
+   - Starting directory: `%USERPROFILE%`
+4. ตั้งค่าให้ Terminal ใช้ UTF-8:
+   - Font face: Cascadia Code PL / Segoe UI Emoji / Noto Color Emoji
+   - Environment variables:  
+     ```bash
+     LANG=en_US.UTF-8
+     LC_ALL=en_US.UTF-8
+     ```
 
 
 1. **โคลนหรือดาวน์โหลดสคริปต์**:
